@@ -12,9 +12,9 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-const double freq = 7000000000;
+double freq = 4000000000;
 
-const double K0 = 2. * Pi * freq / v_c;
+double K0 = 2. * Pi * freq / v_c;
 
 int N_int = 20;
 
@@ -151,17 +151,14 @@ complex<double> create_noise(complex<double> value, double percent) {
     return value + noise * max;
 }
 
-complex<double>** filter(complex<double>** Matr, int N, int iter) {
-    static complex<double>** Result = nullptr;
+complex<double>* filter(complex<double>* Matr, int N, int iter) {
+    static complex<double>* Result = nullptr;
     if (Result == nullptr)
-        CreateMatrix(N, Result);
+        CreateVec(N, Result);
     for (size_t i = 0; i < N; i++)
     {
-        for (size_t j = 0; j < N; j++)
-        {
-            Result[i][j] = Result[i][j] * ((double)iter - 1) + Matr[i][j];
-            Result[i][j] /= iter;
-        }
+        Result[i] = Result[i] * (double)(iter - 1) + Matr[i];
+        Result[i] /= iter;
     }
     return Result;
 }
@@ -176,134 +173,140 @@ int main() {
     double h_x = (B - A) / (double)n;
     double h_y = (D - C) / (double)n;
     cout << h_x << " " << h_y << endl;
-
-    for (size_t I = 0; I < N; I++)
+    for (size_t iteration = 1; iteration < 20; iteration++)
     {
-        int i_koll = I / n;
-        int j_koll = I % n;
-        double x_koll = A + i_koll * h_x + h_x / 2.;
-        double y_koll = C + j_koll * h_y + h_y / 2.;
+        freq += 1000000000;
 
-        for (size_t J = 0; J < N; J++)
+        K0 = 2. * Pi * freq / v_c;
+
+        for (size_t I = 0; I < N; I++)
         {
-            int i_int = J / n;
-            int j_int = J % n;
-            double x_beg = A + i_int * h_x;
-            double y_beg = C + j_int * h_y;
-            double x_end = x_beg + h_x;
-            double y_end = y_beg + h_y;
-            //cout << x_beg << " " << x_end << " " << y_beg << " " << y_end << endl;
-            Am[I][J] = (I == J) ? 1 : 0;
-            Am[I][J] -= Integr(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0,i_int, j_int);
+            int i_koll = I / n;
+            int j_koll = I % n;
+            double x_koll = A + i_koll * h_x + h_x / 2.;
+            double y_koll = C + j_koll * h_y + h_y / 2.;
+
+            for (size_t J = 0; J < N; J++)
+            {
+                int i_int = J / n;
+                int j_int = J % n;
+                double x_beg = A + i_int * h_x;
+                double y_beg = C + j_int * h_y;
+                double x_end = x_beg + h_x;
+                double y_end = y_beg + h_y;
+                //cout << x_beg << " " << x_end << " " << y_beg << " " << y_end << endl;
+                Am[I][J] = (I == J) ? 1 : 0;
+                Am[I][J] -= Integr(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0, i_int, j_int);
+            }
+            Vec[I] = fallWave(K0, x_koll, y_koll);
+            cout << "I = " << I << endl;
         }
-        Vec[I] = fallWave(K0, x_koll, y_koll);
-        cout << "I = " << I << endl;
-    }
-    Gauss(Am, Vec, N);
-    printInFile(Vec, A, C, h_x, h_y, n);
-    /*ofstream file("pole.txt");
-    file << "X Y Z F R I" << endl;
-    for (double x = -2; x <= 2; x += 0.1) {
-        cout << "x = " << x << endl;
-        for (double y = -2; y <= 2; y += 0.1) {
-            auto var = getIntensivity(x, y, A, C, h_x, h_y, n, Vec);
-            file << x << " " << y << " 0 " << abs(var) << " " << var.real() << " " << var.imag() << endl;
+        Gauss(Am, Vec, N);
+        printInFile(Vec, A, C, h_x, h_y, n);
+        /*ofstream file("pole.txt");
+        file << "X Y Z F R I" << endl;
+        for (double x = -2; x <= 2; x += 0.1) {
+            cout << "x = " << x << endl;
+            for (double y = -2; y <= 2; y += 0.1) {
+                auto var = getIntensivity(x, y, A, C, h_x, h_y, n, Vec);
+                file << x << " " << y << " 0 " << abs(var) << " " << var.real() << " " << var.imag() << endl;
+            }
         }
-    }
-    file.close();*/
+        file.close();*/
 
-    ///////обратная задача
-    //создание точек наблюдения
-    double h_x_obr = (B - A) / n_obr;
-    double h_y_obr = (D - C) / n_obr;
+        ///////обратная задача
+        //создание точек наблюдения
+        double h_x_obr = (B - A) / n_obr;
+        double h_y_obr = (D - C) / n_obr;
 
-    double begin_y_pv = 0.1;
-    double h_y_pv = .2;
-    double** point_view = CreateMatrix<double>(N_obr, 2);
+        double begin_y_pv = 0.1;
+        double h_y_pv = .2;
+        double** point_view = CreateMatrix<double>(N_obr, 2);
 
-    if (n_obr % 2 != 0) {
-        cout << "Error in N_obr\n";
-        return -1;
-    }
+        if (n_obr % 2 != 0) {
+            cout << "Error in N_obr\n";
+            return -1;
+        }
 
-    //for (size_t i = 0; i < n_obr; i++)  //изменение x
-    //{
-    //    for (size_t j = 0; j < n_obr / 2; j++)    //изменение y
-    //    {
-    //        point_view[i * n_obr + j][0] = A + i * h_x_obr + h_x_obr / 2.;
-    //        point_view[i * n_obr + j][1] = C - begin_y_pv - j * h_y_pv;
-    //        point_view[i * n_obr + j + n_obr / 2][0] = A + i * h_x_obr + h_x_obr / 2.;
-    //        point_view[i * n_obr + j + n_obr / 2][1] = D + begin_y_pv + j * h_y_pv;
-    //    }
-    //}
+        //for (size_t i = 0; i < n_obr; i++)  //изменение x
+        //{
+        //    for (size_t j = 0; j < n_obr / 2; j++)    //изменение y
+        //    {
+        //        point_view[i * n_obr + j][0] = A + i * h_x_obr + h_x_obr / 2.;
+        //        point_view[i * n_obr + j][1] = C - begin_y_pv - j * h_y_pv;
+        //        point_view[i * n_obr + j + n_obr / 2][0] = A + i * h_x_obr + h_x_obr / 2.;
+        //        point_view[i * n_obr + j + n_obr / 2][1] = D + begin_y_pv + j * h_y_pv;
+        //    }
+        //}
 
-    for (size_t i = 0; i < n_obr; i++)  //изменение x
-    {
-        for (size_t j = 0; j < n_obr / 4; j++)    //изменение y
+        for (size_t i = 0; i < n_obr; i++)  //изменение x
         {
-            point_view[i * n_obr + j][0] = A + i * h_x_obr + h_x_obr / 2.;
-            point_view[i * n_obr + j][1] = C - begin_y_pv - j * h_y_pv;
-            point_view[i * n_obr + j + n_obr / 4][0] = A + i * h_x_obr + h_x_obr / 2.;
-            point_view[i * n_obr + j + n_obr / 4][1] = D + begin_y_pv + j * h_y_pv;
-            point_view[i * n_obr + j + 2 * n_obr / 4][0] = B + j * 0.2;
-            point_view[i * n_obr + j + 2 * n_obr / 4][1] = C + i * h_y_obr + h_y_obr / 2.;
-            point_view[i * n_obr + j + 3 * n_obr / 4][0] = A - j * 0.2;
-            point_view[i * n_obr + j + 3 * n_obr / 4][1] = C + i * h_y_obr + h_y_obr / 2.;
+            for (size_t j = 0; j < n_obr / 4; j++)    //изменение y
+            {
+                point_view[i * n_obr + j][0] = A + i * h_x_obr + h_x_obr / 2.;
+                point_view[i * n_obr + j][1] = C - begin_y_pv - j * h_y_pv;
+                point_view[i * n_obr + j + n_obr / 4][0] = A + i * h_x_obr + h_x_obr / 2.;
+                point_view[i * n_obr + j + n_obr / 4][1] = D + begin_y_pv + j * h_y_pv;
+                point_view[i * n_obr + j + 2 * n_obr / 4][0] = B + j * 0.2;
+                point_view[i * n_obr + j + 2 * n_obr / 4][1] = C + i * h_y_obr + h_y_obr / 2.;
+                point_view[i * n_obr + j + 3 * n_obr / 4][0] = A - j * 0.2;
+                point_view[i * n_obr + j + 3 * n_obr / 4][1] = C + i * h_y_obr + h_y_obr / 2.;
+            }
         }
-    }
-    print_point_view(point_view, N_obr);
-    complex<double>** Am_obr, * Vec_obr;
-    CreateMatrix(N_obr, Am_obr);
-    CreateVec(N_obr, Vec_obr);
+        print_point_view(point_view, N_obr);
+        complex<double>** Am_obr, * Vec_obr;
+        CreateMatrix(N_obr, Am_obr);
+        CreateVec(N_obr, Vec_obr);
 
-    for (size_t I = 0; I < N_obr; I++)
-    {
-        for (size_t J = 0; J < N_obr; J++)
+        for (size_t I = 0; I < N_obr; I++)
         {
-            int i_int = J / n_obr;
-            int j_int = J % n_obr;
-            double x_beg = A + i_int * h_x_obr;
-            double y_beg = C + j_int * h_y_obr;
-            double x_end = x_beg + h_x_obr;
-            double y_end = y_beg + h_y_obr;
-            Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
+            for (size_t J = 0; J < N_obr; J++)
+            {
+                int i_int = J / n_obr;
+                int j_int = J % n_obr;
+                double x_beg = A + i_int * h_x_obr;
+                double y_beg = C + j_int * h_y_obr;
+                double x_end = x_beg + h_x_obr;
+                double y_end = y_beg + h_y_obr;
+                Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
+            }
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.01)
+                - fallWave(K0, point_view[I][0], point_view[I][1]);
         }
-        Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.1)
-            - fallWave(K0, point_view[I][0], point_view[I][1]);
-    }
-    //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
-    //predobusl(Am_obr, N_obr, 1.);
-    Gauss(Am_obr, Vec_obr, N_obr);
-    printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr, "vosst_alpha.txt");
-    complex<double>* vosst_k, * ish_k;
-    CreateVec(N_obr, vosst_k);
-    CreateVec(N_obr, ish_k);
+        //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
+        //predobusl(Am_obr, N_obr, 1.);
+        Gauss(Am_obr, Vec_obr, N_obr);
+        printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr, "vosst_alpha.txt");
+        complex<double>* vosst_k, * ish_k;
+        CreateVec(N_obr, vosst_k);
+        CreateVec(N_obr, ish_k);
 
-    for (size_t I = 0; I < N_obr; I++)
-    {
-        int i_koll = I / n_obr;
-        int j_koll = I % n_obr;
-        double x_koll = A + i_koll * h_x_obr + h_x_obr / 2.;
-        double y_koll = C + j_koll * h_y_obr + h_y_obr / 2.;
-
-        complex<double> Int = fallWave(K0, x_koll, y_koll);
-        for (size_t J = 0; J < N_obr; J++)
+        for (size_t I = 0; I < N_obr; I++)
         {
-            int i_int = J / n_obr;
-            int j_int = J % n_obr;
-            double x_beg = A + i_int * h_x_obr;
-            double y_beg = C + j_int * h_y_obr;
-            double x_end = x_beg + h_x_obr;
-            double y_end = y_beg + h_y_obr;
-            Int += Integr_Revers(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0) * Vec_obr[J];
-        }
-        complex<double> tmp = Vec_obr[I] / Int + K0 * K0;
-        vosst_k[I] = tmp;
-        ish_k[I] = pow(K_f(i_koll, j_koll), 2);
-    }
-    printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
-    printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
+            int i_koll = I / n_obr;
+            int j_koll = I % n_obr;
+            double x_koll = A + i_koll * h_x_obr + h_x_obr / 2.;
+            double y_koll = C + j_koll * h_y_obr + h_y_obr / 2.;
 
+            complex<double> Int = fallWave(K0, x_koll, y_koll);
+            for (size_t J = 0; J < N_obr; J++)
+            {
+                int i_int = J / n_obr;
+                int j_int = J % n_obr;
+                double x_beg = A + i_int * h_x_obr;
+                double y_beg = C + j_int * h_y_obr;
+                double x_end = x_beg + h_x_obr;
+                double y_end = y_beg + h_y_obr;
+                Int += Integr_Revers(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0) * Vec_obr[J];
+            }
+            complex<double> tmp = Vec_obr[I] / Int + K0 * K0;
+            vosst_k[I] = tmp;
+            ish_k[I] = pow(K_f(i_koll, j_koll), 2);
+        }
+        printInFile(filter(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
+        //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
+        //printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
+    }
 
     return 0;
 }
