@@ -12,33 +12,39 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-const double freq = 100000000;
+const double freq = 4000000000;
 
 const double K0 = 2. * Pi * freq / v_c;
 
-int N_int = 10;
+int N_int = 20;
 
-const int n = 8;
+const int n = 16;
 const int N = n * n;
 const double  A = -1., B = 1.,
-        C = -1., D = 1.;
+C = -1., D = 1.;
 
-const int n_obr = 8;
+const int n_obr = n;
 const int N_obr = n_obr * n_obr;
 
 double K_f(double x, double y) {
     //if (-0.6 < x && x < -0.1 && -0.6 < y && y < -0.1)
-    //if(y>0&&x>0&&x<0.5&&y<0.5)
-    if ((y < 0 && x > -.5 && x < 0. && y > -0.5) || (x < 0.2 && y >0. && x>-0.2 && y<0.4))
-        return K0 * 1.5;
+    if ((y > 0.5 && x > -1 && x < 0 && y < 1)
+        || (y > -1 && x > -1 && x < 0 && y < -0.5)
+        || (y > -0.5 && x > 0.5 && x < 1 && y < 0.)
+        || (y > 0.5 && x > 0.5 && x < 1 && y < 1.)
+        || (y > -1 && x > 0. && x < 0.5 && y < 1.)
+        )
+        //if ((y < 0 && x > -.5 && x < 0. && y > -0.5) || (x < 0.2 && y >0. && x > -0.2 && y < 0.4))
+        return 500;
     else
-        return K0 * 15;
+        return 100;
 
 }
 complex<double> Kernel(double k, double x_1, double x_2, double y_1, double y_2) {
     complex <double> ed(0, 1.0);
     double l;
     l = sqrt(pow(x_1 - y_1, 2) + pow(x_2 - y_2, 2));
+    //return complex<double>(_j0(k * l), _y0(k * l));
     return exp(ed * K0 * l) / (4.0 * Pi * l);
 }
 
@@ -52,7 +58,7 @@ complex<double> Integr(double x_beg, double x_end, double y_beg, double y_end, d
         for (size_t j = 0; j < N_int; j++)
         {
             double y = y_beg + j * h_y + h_y / 2.;
-            Sum += (pow(K0, 2) - pow(K_f(x, y), 2)) * Kernel(K, x, y, x_koll, y_koll);
+            Sum += (pow(K_f(x, y), 2) - pow(K0, 2)) * Kernel(K, x, y, x_koll, y_koll);
         }
     }
     return Sum * h_x * h_y;
@@ -108,7 +114,7 @@ void printInFile(complex<double>* _Vec, double _A, double _C, double _h_x, doubl
 
 complex<double> getIntensivity(double _x, double _y, double _A, double _C, double _h_x, double _h_y, int _n, complex<double>* _vec) {
     complex<double> Intens = fallWave(K0, _x, _y);
-    for (size_t i = 0; i < _n*_n; i++)
+    for (size_t i = 0; i < _n * _n; i++)
     {
         int i_int = i / _n;
         int j_int = i % _n;
@@ -164,7 +170,7 @@ int main() {
     }
     Gauss(Am, Vec, N);
     printInFile(Vec, A, C, h_x, h_y, n);
-    ofstream file("pole.txt");
+    /*ofstream file("pole.txt");
     file << "X Y Z F R I" << endl;
     for (double x = -2; x <= 2; x += 0.1) {
         cout << "x = " << x << endl;
@@ -173,7 +179,7 @@ int main() {
             file << x << " " << y << " 0 " << abs(var) << " " << var.real() << " " << var.imag() << endl;
         }
     }
-    file.close();
+    file.close();*/
 
     ///////обратная задача
     //создание точек наблюдения
@@ -206,16 +212,16 @@ int main() {
         {
             point_view[i * n_obr + j][0] = A + i * h_x_obr + h_x_obr / 2.;
             point_view[i * n_obr + j][1] = C - begin_y_pv - j * h_y_pv;
-            point_view[i * n_obr + j + n_obr / 4][0] = A +0.2+ i * h_x_obr + h_x_obr / 2.;
+            point_view[i * n_obr + j + n_obr / 4][0] = A + i * h_x_obr + h_x_obr / 2.;
             point_view[i * n_obr + j + n_obr / 4][1] = D + begin_y_pv + j * h_y_pv;
-            point_view[i * n_obr + j + 2 * n_obr / 4][0] = B + 0.1 + j * 0.2;
+            point_view[i * n_obr + j + 2 * n_obr / 4][0] = B + j * 0.2;
             point_view[i * n_obr + j + 2 * n_obr / 4][1] = C + i * h_y_obr + h_y_obr / 2.;
-            point_view[i * n_obr + j + 3 * n_obr / 4][0] = A - 0.4 - j * 0.2;
+            point_view[i * n_obr + j + 3 * n_obr / 4][0] = A - j * 0.2;
             point_view[i * n_obr + j + 3 * n_obr / 4][1] = C + i * h_y_obr + h_y_obr / 2.;
         }
     }
     print_point_view(point_view, N_obr);
-    complex<double>** Am_obr, *Vec_obr;
+    complex<double>** Am_obr, * Vec_obr;
     CreateMatrix(N_obr, Am_obr);
     CreateVec(N_obr, Vec_obr);
 
@@ -237,8 +243,8 @@ int main() {
     //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
     //predobusl(Am_obr, N_obr, 1.);
     Gauss(Am_obr, Vec_obr, N_obr);
-    printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr,"vosst_alpha.txt");
-    complex<double> *vosst_k, *ish_k;
+    printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr, "vosst_alpha.txt");
+    complex<double>* vosst_k, * ish_k;
     CreateVec(N_obr, vosst_k);
     CreateVec(N_obr, ish_k);
 
@@ -258,7 +264,7 @@ int main() {
             double y_beg = C + j_int * h_y_obr;
             double x_end = x_beg + h_x_obr;
             double y_end = y_beg + h_y_obr;
-            Int+= Integr_Revers(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0) * Vec_obr[J];
+            Int += Integr_Revers(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0) * Vec_obr[J];
         }
         complex<double> tmp = Vec_obr[I] / Int + K0 * K0;
         vosst_k[I] = tmp;
