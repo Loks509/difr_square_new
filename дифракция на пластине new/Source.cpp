@@ -12,29 +12,32 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-const double freq = 4000000000;
+const double freq = 7000000000;
 
 const double K0 = 2. * Pi * freq / v_c;
 
 int N_int = 20;
 
-const int n = 16;
+const int n = 12;
 const int N = n * n;
 const double  A = -1., B = 1.,
 C = -1., D = 1.;
 
-const int n_obr = n;
+const int n_obr = 12;
 const int N_obr = n_obr * n_obr;
 
 double K_f(double x, double y) {
     //if (-0.6 < x && x < -0.1 && -0.6 < y && y < -0.1)
-    if ((y > 0.5 && x > -1 && x < 0 && y < 1)
-        || (y > -1 && x > -1 && x < 0 && y < -0.5)
-        || (y > -0.5 && x > 0.5 && x < 1 && y < 0.)
-        || (y > 0.5 && x > 0.5 && x < 1 && y < 1.)
-        || (y > -1 && x > 0. && x < 0.5 && y < 1.)
-        )
+    //if ((y > 0.75 && x > -1 && x < -0.8 && y < 1)
+        //|| (y > -1 && x > -1 && x < 0 && y < -0.5)
+        //|| (y > -0.5 && x > 0.5 && x < 1 && y < 0.)
+        //|| (y > 0.5 && x > 0.5 && x < 1 && y < 1.)
+        //|| (y > -1 && x > 0. && x < 0.5 && y < 1.)
+    //    )
         //if ((y < 0 && x > -.5 && x < 0. && y > -0.5) || (x < 0.2 && y >0. && x > -0.2 && y < 0.4))
+    if ((x == 3||x==4) && (y==3||y == 4))
+        return 300;
+    else if (x == 6 && y == 7)
         return 500;
     else
         return 100;
@@ -48,9 +51,13 @@ complex<double> Kernel(double k, double x_1, double x_2, double y_1, double y_2)
     return exp(ed * K0 * l) / (4.0 * Pi * l);
 }
 
-complex<double> Integr(double x_beg, double x_end, double y_beg, double y_end, double x_koll, double y_koll, double K) {
+complex<double> Integr(double x_beg, double x_end, double y_beg, double y_end, double x_koll, double y_koll, double K, int I, int J) {
     double h_x = (x_end - x_beg) / (double)N_int;
     double h_y = (y_end - y_beg) / (double)N_int;
+
+    double x_c = (x_end + x_beg) / 2.0; //альтренативный вариант неоднородности
+    double y_c = (y_end + y_beg) / 2.0;
+
     complex<double> Sum = 0;
     for (size_t i = 0; i < N_int; i++)
     {
@@ -58,7 +65,7 @@ complex<double> Integr(double x_beg, double x_end, double y_beg, double y_end, d
         for (size_t j = 0; j < N_int; j++)
         {
             double y = y_beg + j * h_y + h_y / 2.;
-            Sum += (pow(K_f(x, y), 2) - pow(K0, 2)) * Kernel(K, x, y, x_koll, y_koll);
+            Sum += (pow(K_f(I, J), 2) - pow(K0, 2)) * Kernel(K, x, y, x_koll, y_koll);
         }
     }
     return Sum * h_x * h_y;
@@ -122,7 +129,7 @@ complex<double> getIntensivity(double _x, double _y, double _A, double _C, doubl
         double y_beg = _C + j_int * _h_y;
         double x_end = x_beg + _h_x;
         double y_end = y_beg + _h_y;
-        Intens += Integr(x_beg, x_end, y_beg, y_end, _x, _y, K0) * _vec[i];
+        Intens += Integr(x_beg, x_end, y_beg, y_end, _x, _y, K0, i_int, j_int) * _vec[i];
     }
     return Intens;
 }
@@ -136,7 +143,31 @@ void print_point_view(double** _points, int _N) {
     }
 }
 
+complex<double> create_noise(complex<double> value, double percent) {
+    complex<double> max = value / 100.0 * percent;
+
+    double noise = (rand() % 2000) / 1000.0 - 1.0;
+    cout << noise*max <<"  "<<value<< endl;
+    return value + noise * max;
+}
+
+complex<double>** filter(complex<double>** Matr, int N, int iter) {
+    static complex<double>** Result = nullptr;
+    if (Result == nullptr)
+        CreateMatrix(N, Result);
+    for (size_t i = 0; i < N; i++)
+    {
+        for (size_t j = 0; j < N; j++)
+        {
+            Result[i][j] = Result[i][j] * ((double)iter - 1) + Matr[i][j];
+            Result[i][j] /= iter;
+        }
+    }
+    return Result;
+}
+
 int main() {
+    srand(time(0));
     complex<double>** Am;
     complex<double>* Vec;
     CreateMatrix(N, N, Am);
@@ -163,7 +194,7 @@ int main() {
             double y_end = y_beg + h_y;
             //cout << x_beg << " " << x_end << " " << y_beg << " " << y_end << endl;
             Am[I][J] = (I == J) ? 1 : 0;
-            Am[I][J] -= Integr(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0);
+            Am[I][J] -= Integr(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0,i_int, j_int);
         }
         Vec[I] = fallWave(K0, x_koll, y_koll);
         cout << "I = " << I << endl;
@@ -237,7 +268,7 @@ int main() {
             double y_end = y_beg + h_y_obr;
             Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
         }
-        Vec_obr[I] = getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec)
+        Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.1)
             - fallWave(K0, point_view[I][0], point_view[I][1]);
     }
     //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
@@ -268,7 +299,7 @@ int main() {
         }
         complex<double> tmp = Vec_obr[I] / Int + K0 * K0;
         vosst_k[I] = tmp;
-        ish_k[I] = pow(K_f(x_koll, y_koll), 2);
+        ish_k[I] = pow(K_f(i_koll, j_koll), 2);
     }
     printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
     printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
