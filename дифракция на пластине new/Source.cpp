@@ -12,7 +12,7 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-double freq = 4000000000;
+double freq = 1 * Mega;
 
 double K0 = 2. * Pi * freq / v_c;
 
@@ -175,7 +175,7 @@ int main() {
     cout << h_x << " " << h_y << endl;
     for (size_t iteration = 1; iteration < 20; iteration++)
     {
-        freq += 1000000000;
+        freq += 0.5*Mega;
 
         K0 = 2. * Pi * freq / v_c;
 
@@ -270,7 +270,7 @@ int main() {
                 double y_end = y_beg + h_y_obr;
                 Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
             }
-            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.01)
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.001)
                 - fallWave(K0, point_view[I][0], point_view[I][1]);
         }
         //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
@@ -303,7 +303,7 @@ int main() {
             vosst_k[I] = tmp;
             ish_k[I] = pow(K_f(i_koll, j_koll), 2);
         }
-        printInFile(filter(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
+        printInFile(filter(vosst_k,N,iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
     }
