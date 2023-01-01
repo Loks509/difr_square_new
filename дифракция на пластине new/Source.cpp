@@ -157,7 +157,7 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
         CreateVec(N, Result);
     for (size_t i = 0; i < N; i++)
     {
-        Result[i] = Result[i] * (double)(iter - 1) + Matr[i];
+        Result[i] = abs(Result[i].real()) * (double)(iter - 1) + abs(Matr[i].real());
         Result[i] /= iter;
     }
     return Result;
@@ -175,7 +175,7 @@ int main() {
     cout << h_x << " " << h_y << endl;
     for (size_t iteration = 1; iteration < 20; iteration++)
     {
-        freq += 0.5*Mega;
+        freq +=0.5*Mega;
 
         K0 = 2. * Pi * freq / v_c;
 
@@ -270,7 +270,7 @@ int main() {
                 double y_end = y_beg + h_y_obr;
                 Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
             }
-            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.001)
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.0001)
                 - fallWave(K0, point_view[I][0], point_view[I][1]);
         }
         //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
@@ -305,7 +305,7 @@ int main() {
         }
         printInFile(filter(vosst_k,N,iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
-        //printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
+        printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
     }
 
     return 0;
