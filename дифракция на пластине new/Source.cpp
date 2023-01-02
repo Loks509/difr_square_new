@@ -105,10 +105,9 @@ complex<double> Integr_Revers(double x_beg, double x_end, double y_beg, double y
 //}
 
 //сферическая волна
-complex<double> fallWave(double k, double x, double y) {
+complex<double> fallWave(double k, double x, double y, double x_c = -2, double y_c = -2) {
     complex <double> ed(0, 1.0);
     //return exp(ed * k * x);
-    double x_c = -2, y_c = -2;
     double r = sqrt(pow(x - x_c, 2) + pow(y - y_c, 2));
     return ed / 4. * _H(k * r);
     //return exp(ed * k * r);
@@ -167,6 +166,13 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
         CreateVec(N, Result);
     for (size_t i = 0; i < N; i++)
     {
+        //слишком много данных отбрасывается но картинка более менее
+        //if (pow(min_good, 2) < Result[i].real() && Result[i].real() < pow(max_good, 2))
+        //    Result[i] = 0;  //фон
+        //else if (pow(min_bad, 2) < Result[i].real() && Result[i].real() < pow(max_bad, 2))
+        //    Result[i] = Result[i];  //неоднородность
+        //else
+        //    Result[i] = 0;          //артефакт
         Result[i] = abs(Result[i].real()) * (double)(iter - 1) + abs(Matr[i].real());
         Result[i] /= iter;
     }
