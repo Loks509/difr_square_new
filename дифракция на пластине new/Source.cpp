@@ -12,7 +12,7 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-double freq = 3 * Mega;
+double freq = 1 * Mega;
 
 double K0 = 2. * Pi * freq / v_c;
 
@@ -26,6 +26,11 @@ C = -1., D = 1.;
 const int n_obr = 12;
 const int N_obr = n_obr * n_obr;
 
+const double min_good = 50;
+const double max_good = 150;
+
+const double min_bad = 150;
+const double max_bad = 600;
 complex<double> _H(double x) {
     return complex<double>(_j0(x), _y0(x));
 }
@@ -275,7 +280,7 @@ int main() {
                 double y_end = y_beg + h_y_obr;
                 Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
             }
-            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.0)
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.01)
                 - fallWave(K0, point_view[I][0], point_view[I][1]);
         }
         //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
@@ -311,7 +316,7 @@ int main() {
         printInFile(filter(vosst_k,N,iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
-        return 0;
+        //return 0;
     }
 
     return 0;
