@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <complex>
+#include "matrix.h"
 using namespace std;
 
 template<typename _Type>
@@ -332,7 +333,7 @@ void Gauss(complex <double>** Matrix, complex <double>* Vec, int Nm) {
 
     for (int k = 0; k < Nm; k++) {
 
-        cout << "k = " << k << "    " << endl;
+        cout << "\rk = " << k;
 
         if (Matrix[k][k] != ed) {
             complex <double> T = Matrix[k][k];
@@ -360,6 +361,7 @@ void Gauss(complex <double>** Matrix, complex <double>* Vec, int Nm) {
         }
         Vec[i] = Sum;
     }
+    cout << endl;
 }
 
 template<typename type_ptr>
@@ -381,7 +383,7 @@ void alghoritm_hottenlinga(complex <double>** _Matrix, complex <double>** _begin
     CreateMatrix(_N, _N, R);
 
     
-    for (size_t iter = 0; iter < 40; iter++)
+    for (size_t iter = 0; iter < 10; iter++)
     {
         mult_matr_matr(_Matrix, _begin_m, _N, R);
         for (size_t i = 0; i < _N; i++)
@@ -665,4 +667,40 @@ int Gradient(int n, complex<double>** A, complex<double>* V, complex<double>* W,
 
 
     return 1;
+}
+
+
+double cond(complex<double>** M) {
+    return Matrix_lib::cond(M);
+}
+
+//void conjMatrix(complex<double>** _M, int _N) {
+//    for (size_t i = 0; i < _N; i++)
+//    {
+//        _M[i][i] = conj(_M[i][i]);
+//    }
+//    for (size_t i = 0; i < _N; i++)
+//    {
+//        for (size_t j = 0; j < i; j++)
+//        {
+//            complex<double> tmp = _M[i][j];
+//            _M[i][j] = conj(_M[j][i]);
+//            _M[j][i] = conj(tmp);
+//        }
+//    }
+//}
+
+void conjMatrix(complex<double>** _in, complex<double>** _out, int _N) {
+    for (size_t i = 0; i < _N; i++)
+    {
+        for (size_t j = 0; j < _N; j++)
+        {
+            _out[i][j] = conj(_in[j][i]);
+        }
+    }
+}
+
+void newPreCond(complex<double>** _M, complex<double>* _V, int _N) {
+    cout << "Cond begin = " << cond(_M) << endl;
+
 }

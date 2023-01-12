@@ -12,18 +12,19 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-double freq = 1 * Mega;
+double freq = 5. * Mega;
 
 double K0 = 2. * Pi * freq / v_c;
 
 int N_int = 20;
 
-const int n = 12;
+const int n = 20;
 const int N = n * n;
 const double  A = -1., B = 1.,
 C = -1., D = 1.;
+const int c_of_iter = 20;
 
-const int n_obr = 12;
+const int n_obr = n;
 const int N_obr = n_obr * n_obr;
 
 const double min_good = 50;
@@ -31,6 +32,9 @@ const double max_good = 150;
 
 const double min_bad = 150;
 const double max_bad = 600;
+
+double x_ist = -2, y_ist = -2;
+
 complex<double> _H(double x) {
     return complex<double>(_j0(x), _y0(x));
 }
@@ -129,7 +133,7 @@ void printInFile(complex<double>* _Vec, double _A, double _C, double _h_x, doubl
 }
 
 complex<double> getIntensivity(double _x, double _y, double _A, double _C, double _h_x, double _h_y, int _n, complex<double>* _vec) {
-    complex<double> Intens = fallWave(K0, _x, _y);
+    complex<double> Intens = fallWave(K0, _x, _y, x_ist, y_ist);
     for (size_t i = 0; i < _n * _n; i++)
     {
         int i_int = i / _n;
@@ -156,7 +160,7 @@ complex<double> create_noise(complex<double> value, double percent) {
     complex<double> max = value / 100.0 * percent;
 
     double noise = (rand() % 2000) / 1000.0 - 1.0;
-    cout << noise*max <<"  "<<value<< endl;
+    //cout << noise*max <<"  "<<value<< endl;
     return value + noise * max;
 }
 
@@ -180,19 +184,30 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
 }
 
 int main() {
-    srand(time(0));
+    //srand(time(0));
     complex<double>** Am;
     complex<double>* Vec;
     CreateMatrix(N, N, Am);
     CreateVec(N, Vec);
 
+    
     double h_x = (B - A) / (double)n;
     double h_y = (D - C) / (double)n;
     cout << h_x << " " << h_y << endl;
-    for (size_t iteration = 1; iteration < 20; iteration++)
+    for (size_t iteration = 1; iteration < c_of_iter*2; iteration++)
     {
-        freq +=0.5*Mega;
-
+        if (iteration < c_of_iter) {
+            freq += 0.5 * Mega;
+        }
+        else {
+            x_ist =  sqrt(8) * cos(iteration / (double)c_of_iter * 2 * Pi);
+            y_ist =  sqrt(8)* sin(iteration / (double)c_of_iter * 2 * Pi);
+            freq = 5.5*Mega;
+        }
+        //freq +=0.5*Mega;
+        //x_ist =  sqrt(8) * cos(iteration / (double)c_of_iter * 2 * Pi);
+        //y_ist = sqrt(8) * sin(iteration / (double)c_of_iter * 2 * Pi);
+        cout << x_ist << "   " << y_ist << endl;
         K0 = 2. * Pi * freq / v_c;
 
         for (size_t I = 0; I < N; I++)
@@ -214,9 +229,10 @@ int main() {
                 Am[I][J] = (I == J) ? 1 : 0;
                 Am[I][J] -= Integr(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0, i_int, j_int);
             }
-            Vec[I] = fallWave(K0, x_koll, y_koll);
-            cout << "I = " << I << endl;
+            Vec[I] = fallWave(K0, x_koll, y_koll, x_ist, y_ist);
+            cout << "\rI = " << I;
         }
+        cout << endl;
         Gauss(Am, Vec, N);
         printInFile(Vec, A, C, h_x, h_y, n);
         /*ofstream file("pole.txt");
@@ -286,11 +302,37 @@ int main() {
                 double y_end = y_beg + h_y_obr;
                 Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
             }
-            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), 0.01)
-                - fallWave(K0, point_view[I][0], point_view[I][1]);
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), .1)
+                - fallWave(K0, point_view[I][0], point_view[I][1], x_ist, y_ist);
         }
-        //Vec_obr=BICGstab(Am_obr, Vec_obr, N_obr);
-        //predobusl(Am_obr, N_obr, 1.);
+
+        cout << "Cond = " << cond(Am_obr) << endl;
+        //----------преобуславливание---------
+        //complex<double>** conj_Am, * conj_Vec;
+        //CreateMatrix(N, conj_Am);
+        //CreateVec(N, conj_Vec);
+        
+        //conjMatrix(Am_obr, conj_Am, N);
+
+        //complex<double>** symmetric_Am, * symmetric_Vec;
+        //symmetric_Am = mult_matr_matr(conj_Am, Am_obr, N);
+        //symmetric_Vec = mult_matr_vec(conj_Am, Vec_obr, N);
+
+        //
+        ////complex<double> tmp = mult_matr_matr()
+        //complex<double>** precond = predobusl(symmetric_Am, N, .1);
+        //complex<double>** preAm = mult_matr_matr(precond, symmetric_Am, N), * preVec = mult_matr_vec(precond, symmetric_Vec, N);
+        //cout << "Cond = " << cond(preAm) << endl;
+        ////Gauss(preAm, preVec, N_obr);
+        ////Vec_obr = BICGstab(preAm, preVec, N);
+        //complex<double>* W;
+        //CreateVec(N, W);
+        //for (size_t i = 0; i < N; i++)
+        //{
+        //    W[i] = 1.0;
+        //}
+        //Gradient(N, Am_obr, Vec_obr, W, Vec_obr);
+        //----------преобуславливание---------
         Gauss(Am_obr, Vec_obr, N_obr);
         printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr, "vosst_alpha.txt");
         complex<double>* vosst_k, * ish_k;
@@ -304,7 +346,7 @@ int main() {
             double x_koll = A + i_koll * h_x_obr + h_x_obr / 2.;
             double y_koll = C + j_koll * h_y_obr + h_y_obr / 2.;
 
-            complex<double> Int = fallWave(K0, x_koll, y_koll);
+            complex<double> Int = fallWave(K0, x_koll, y_koll, x_ist, y_ist);
             for (size_t J = 0; J < N_obr; J++)
             {
                 int i_int = J / n_obr;
@@ -319,10 +361,9 @@ int main() {
             vosst_k[I] = tmp;
             ish_k[I] = pow(K_f(i_koll, j_koll), 2);
         }
-        printInFile(filter(vosst_k,N,iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
+        printInFile(filter(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
-        //return 0;
     }
 
     return 0;
