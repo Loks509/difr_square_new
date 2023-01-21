@@ -12,13 +12,18 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-double freq = 5. * Mega;
+double freq = 10008.0 * Mega;
+
+//с этми значениями решается 24 на 24 с трудом!
+//double freq = 10008.0 * Mega;
+//int N_int = 30;
+//const int n = 24;
 
 double K0 = 2. * Pi * freq / v_c;
 
-int N_int = 20;
+int N_int = 30;
 
-const int n = 20;
+const int n = 24;
 const int N = n * n;
 const double  A = -1., B = 1.,
 C = -1., D = 1.;
@@ -31,9 +36,11 @@ const double min_good = 50;
 const double max_good = 150;
 
 const double min_bad = 150;
-const double max_bad = 600;
+const double max_bad = 1581;
 
-double x_ist = -2, y_ist = -2;
+double x_ist = -2, y_ist = 2;
+
+int count_mass[n * n] = {0};
 
 complex<double> _H(double x) {
     return complex<double>(_j0(x), _y0(x));
@@ -48,9 +55,9 @@ double K_f(double x, double y) {
         //|| (y > -1 && x > 0. && x < 0.5 && y < 1.)
     //    )
         //if ((y < 0 && x > -.5 && x < 0. && y > -0.5) || (x < 0.2 && y >0. && x > -0.2 && y < 0.4))
-    if ((x == 3||x==4) && (y==3||y == 4))
+    if ((x == 3||x==4 || x == 5 || x == 6 || x == 7) && (y==3||y == 4 || y == 5 || y == 6 || y == 7))
         return 300;
-    else if (x == 6 && y == 7)
+    else if (x == 8 && y == 8)
         return 500;
     else
         return 100;
@@ -170,15 +177,19 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
         CreateVec(N, Result);
     for (size_t i = 0; i < N; i++)
     {
-        //слишком много данных отбрасывается но картинка более менее
-        //if (pow(min_good, 2) < Result[i].real() && Result[i].real() < pow(max_good, 2))
-        //    Result[i] = 0;  //фон
-        //else if (pow(min_bad, 2) < Result[i].real() && Result[i].real() < pow(max_bad, 2))
-        //    Result[i] = Result[i];  //неоднородность
-        //else
-        //    Result[i] = 0;          //артефакт
-        Result[i] = abs(Result[i].real()) * (double)(iter - 1) + abs(Matr[i].real());
-        Result[i] /= iter;
+        if (pow(min_good, 2) < Matr[i].real() && Matr[i].real() < pow(max_good, 2)) {
+            Matr[i] = 0;  //фон
+            count_mass[i]++;
+            Result[i] = abs(Result[i].real()) * (double)(count_mass[i] - 1) + abs(Matr[i].real());
+            Result[i] /= count_mass[i];
+        }
+        else if (pow(min_bad, 2) < Matr[i].real() && Matr[i].real() < pow(max_bad, 2)) {
+            count_mass[i]++;
+            Result[i] = abs(Result[i].real()) * (double)(count_mass[i] - 1) + abs(Matr[i].real());
+            Result[i] /= count_mass[i];
+        }
+        else
+            Matr[i] = 0;
     }
     return Result;
 }
@@ -194,19 +205,19 @@ int main() {
     double h_x = (B - A) / (double)n;
     double h_y = (D - C) / (double)n;
     cout << h_x << " " << h_y << endl;
-    for (size_t iteration = 1; iteration < c_of_iter*2; iteration++)
+    for (size_t iteration = 1; iteration < c_of_iter; iteration++)
     {
-        if (iteration < c_of_iter) {
+        /*if (iteration < c_of_iter) {
             freq += 0.5 * Mega;
         }
         else {
             x_ist =  sqrt(8) * cos(iteration / (double)c_of_iter * 2 * Pi);
             y_ist =  sqrt(8)* sin(iteration / (double)c_of_iter * 2 * Pi);
             freq = 5.5*Mega;
-        }
-        //freq +=0.5*Mega;
-        //x_ist =  sqrt(8) * cos(iteration / (double)c_of_iter * 2 * Pi);
-        //y_ist = sqrt(8) * sin(iteration / (double)c_of_iter * 2 * Pi);
+        }*/
+        freq +=0.5*Mega;
+        /*x_ist = sqrt(8) * cos(iteration / (double)c_of_iter * 2 * Pi);
+        y_ist = sqrt(8) * sin(iteration / (double)c_of_iter * 2 * Pi);*/
         cout << x_ist << "   " << y_ist << endl;
         K0 = 2. * Pi * freq / v_c;
 
@@ -302,7 +313,7 @@ int main() {
                 double y_end = y_beg + h_y_obr;
                 Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
             }
-            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), .1)
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), .0)
                 - fallWave(K0, point_view[I][0], point_view[I][1], x_ist, y_ist);
         }
 
@@ -361,9 +372,11 @@ int main() {
             vosst_k[I] = tmp;
             ish_k[I] = pow(K_f(i_koll, j_koll), 2);
         }
+        printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k"+to_string(iteration)+".txt");
         printInFile(filter(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
+        //return 0;
     }
 
     return 0;
