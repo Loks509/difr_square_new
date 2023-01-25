@@ -333,7 +333,7 @@ void Gauss(complex <double>** Matrix, complex <double>* Vec, int Nm) {
 
     for (int k = 0; k < Nm; k++) {
 
-        cout << "\rk = " << k;
+        //cout << "\rk = " << k;
 
         if (Matrix[k][k] != ed) {
             complex <double> T = Matrix[k][k];
@@ -361,7 +361,7 @@ void Gauss(complex <double>** Matrix, complex <double>* Vec, int Nm) {
         }
         Vec[i] = Sum;
     }
-    cout << endl;
+    //cout << endl;
 }
 
 template<typename type_ptr>

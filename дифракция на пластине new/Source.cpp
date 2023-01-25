@@ -2,6 +2,7 @@
 #include <fstream>
 #include <complex>
 #include "matrix_func.h"
+#include <mpi.h>
 
 using namespace std;
 
@@ -12,7 +13,12 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-double freq = 10008.0 * Mega;
+double freq = 10.0 * Mega;
+
+
+int start_index = 37;    //менять это!
+const int c_of_iter = 100;  //это по желанию
+
 
 //с этми значениями решается 24 на 24 с трудом!
 //double freq = 10008.0 * Mega;
@@ -21,13 +27,13 @@ double freq = 10008.0 * Mega;
 
 double K0 = 2. * Pi * freq / v_c;
 
-int N_int = 30;
+int N_int = 24;
 
-const int n = 24;
+const int n = 16;
 const int N = n * n;
 const double  A = -1., B = 1.,
 C = -1., D = 1.;
-const int c_of_iter = 20;
+
 
 const int n_obr = n;
 const int N_obr = n_obr * n_obr;
@@ -42,26 +48,62 @@ double x_ist = -2, y_ist = 2;
 
 int count_mass[n * n] = {0};
 
+int global_rank = -1;
+
 complex<double> _H(double x) {
     return complex<double>(_j0(x), _y0(x));
 }
 
-double K_f(double x, double y) {
-    //if (-0.6 < x && x < -0.1 && -0.6 < y && y < -0.1)
-    //if ((y > 0.75 && x > -1 && x < -0.8 && y < 1)
-        //|| (y > -1 && x > -1 && x < 0 && y < -0.5)
-        //|| (y > -0.5 && x > 0.5 && x < 1 && y < 0.)
-        //|| (y > 0.5 && x > 0.5 && x < 1 && y < 1.)
-        //|| (y > -1 && x > 0. && x < 0.5 && y < 1.)
-    //    )
-        //if ((y < 0 && x > -.5 && x < 0. && y > -0.5) || (x < 0.2 && y >0. && x > -0.2 && y < 0.4))
-    if ((x == 3||x==4 || x == 5 || x == 6 || x == 7) && (y==3||y == 4 || y == 5 || y == 6 || y == 7))
+int get_random_index() {
+    return rand() % 16;
+}
+
+double K_f_1(double x, double y) {
+    static int* var = nullptr;
+    if (var == nullptr) {
+        var = new int[20];
+        cout << get_random_index() << endl;
+        var[0] = get_random_index();
+        var[1] = get_random_index();
+        var[2] = get_random_index();
+        var[3] = get_random_index();
+        var[4] = get_random_index();
+        var[5] = get_random_index();
+        var[6] = get_random_index();
+        var[7] = get_random_index();
+        var[8] = get_random_index();
+        var[9] = get_random_index();
+        var[10] = get_random_index();
+        var[11] = get_random_index();
+        var[12] = get_random_index();
+        var[13] = get_random_index();
+        var[14] = get_random_index();
+        var[15] = get_random_index();
+    }
+
+    if (x == var[0] && y == var[1])
         return 300;
-    else if (x == 8 && y == 8)
+    else if ((x == var[2] || x == (var[2] + 1)) && (y == var[3] || y == (var[3] + 1)))
+        return 500;
+    else if (x == var[4] && y == var[5])
+        return 500;
+    else if (x == var[6] && y == var[7])
+        return 500;
+    else if (x == var[8] && y == var[9])
+        return 500;
+    else if (x == var[10] && y == var[11])
+        return 500;
+    else if (x == var[12] && y == var[13])
+        return 500;
+    else if ((x == var[14] || x == (var[14] - 1) || x == (var[14] + 1)) && (y == (var[15]) || y == (var[15] - 1) || y == (var[15] + 1)))
         return 500;
     else
         return 100;
+}
 
+
+double K_f(double x, double y) {
+    return K_f_1(x, y);
 }
 complex<double> Kernel(double k, double x_1, double x_2, double y_1, double y_2) {
     complex <double> ed(0, 1.0);
@@ -195,7 +237,11 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
 }
 
 int main() {
-    //srand(time(0));
+    MPI_Init(0, 0);
+    MPI_Comm_rank(MPI_COMM_WORLD, &global_rank);
+    ofstream main_file(to_string(start_index+global_rank)+"_experiment.txt");
+    ofstream ans(to_string(start_index + global_rank) + "_answer.txt");
+    srand(time(0) + global_rank);
     complex<double>** Am;
     complex<double>* Vec;
     CreateMatrix(N, N, Am);
@@ -204,9 +250,12 @@ int main() {
     
     double h_x = (B - A) / (double)n;
     double h_y = (D - C) / (double)n;
-    cout << h_x << " " << h_y << endl;
-    for (size_t iteration = 1; iteration < c_of_iter; iteration++)
+    //cout << h_x << " " << h_y << endl;
+    for (size_t iteration = 0; iteration < c_of_iter; iteration++)
     {
+        if (global_rank == 0) {
+            cout << "Current iteration: " << iteration << endl;
+        }
         /*if (iteration < c_of_iter) {
             freq += 0.5 * Mega;
         }
@@ -215,10 +264,10 @@ int main() {
             y_ist =  sqrt(8)* sin(iteration / (double)c_of_iter * 2 * Pi);
             freq = 5.5*Mega;
         }*/
-        freq +=0.5*Mega;
+        freq += 0.1 * Mega;
         /*x_ist = sqrt(8) * cos(iteration / (double)c_of_iter * 2 * Pi);
         y_ist = sqrt(8) * sin(iteration / (double)c_of_iter * 2 * Pi);*/
-        cout << x_ist << "   " << y_ist << endl;
+        //cout << x_ist << "   " << y_ist << endl;
         K0 = 2. * Pi * freq / v_c;
 
         for (size_t I = 0; I < N; I++)
@@ -241,9 +290,9 @@ int main() {
                 Am[I][J] -= Integr(x_beg, x_end, y_beg, y_end, x_koll, y_koll, K0, i_int, j_int);
             }
             Vec[I] = fallWave(K0, x_koll, y_koll, x_ist, y_ist);
-            cout << "\rI = " << I;
+            //cout << "\rI = " << I;
         }
-        cout << endl;
+        //cout << endl;
         Gauss(Am, Vec, N);
         printInFile(Vec, A, C, h_x, h_y, n);
         /*ofstream file("pole.txt");
@@ -313,16 +362,16 @@ int main() {
                 double y_end = y_beg + h_y_obr;
                 Am_obr[I][J] = Integr_Revers(x_beg, x_end, y_beg, y_end, point_view[I][0], point_view[I][1], K0);
             }
-            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), .0)
+            Vec_obr[I] = create_noise(getIntensivity(point_view[I][0], point_view[I][1], A, C, h_x, h_y, n, Vec), .01)
                 - fallWave(K0, point_view[I][0], point_view[I][1], x_ist, y_ist);
         }
 
-        cout << "Cond = " << cond(Am_obr) << endl;
+        //cout << "Cond = " << cond(Am_obr) << endl;
         //----------преобуславливание---------
         //complex<double>** conj_Am, * conj_Vec;
         //CreateMatrix(N, conj_Am);
         //CreateVec(N, conj_Vec);
-        
+
         //conjMatrix(Am_obr, conj_Am, N);
 
         //complex<double>** symmetric_Am, * symmetric_Vec;
@@ -345,7 +394,7 @@ int main() {
         //Gradient(N, Am_obr, Vec_obr, W, Vec_obr);
         //----------преобуславливание---------
         Gauss(Am_obr, Vec_obr, N_obr);
-        printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr, "vosst_alpha.txt");
+        //printInFile(Vec_obr, A, C, h_x_obr, h_y_obr, n_obr, "vosst_alpha.txt");
         complex<double>* vosst_k, * ish_k;
         CreateVec(N_obr, vosst_k);
         CreateVec(N_obr, ish_k);
@@ -372,12 +421,32 @@ int main() {
             vosst_k[I] = tmp;
             ish_k[I] = pow(K_f(i_koll, j_koll), 2);
         }
-        printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k"+to_string(iteration)+".txt");
-        printInFile(filter(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
+        main_file << "[";
+        for (size_t i = 0; i < N_obr; i++)
+        {
+            main_file << vosst_k[i].real();
+            if (i != N_obr - 1)
+                main_file << ", ";
+        }
+        main_file << "]\n";
+
+        //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k"+to_string(iteration)+".txt");
+        //printInFile(filter(vosst_k, N, iteration+1), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
+
+        ans << "[";
+        for (size_t i = 0; i < N_obr; i++)
+        {
+            ans << ish_k[i].real();
+            if (i != N_obr - 1)
+                ans << ", ";
+        }
+        ans << "]\n";
         //return 0;
     }
-
+    ans.close();
+    main_file.close();
+    MPI_Finalize();
     return 0;
 }
