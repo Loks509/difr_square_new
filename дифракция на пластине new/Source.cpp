@@ -12,7 +12,7 @@ const double Kilo = pow(10, 3);
 const double Mega = pow(10, 9);
 const double Tera = pow(10, 12);
 
-double freq = 10008.0 * Mega;
+double freq = 20.0 * Mega;
 
 //с этми значениями решается 24 на 24 с трудом!
 //double freq = 10008.0 * Mega;
@@ -23,7 +23,7 @@ double K0 = 2. * Pi * freq / v_c;
 
 int N_int = 30;
 
-const int n = 24;
+const int n = 20;
 const int N = n * n;
 const double  A = -1., B = 1.,
 C = -1., D = 1.;
@@ -33,14 +33,20 @@ const int n_obr = n;
 const int N_obr = n_obr * n_obr;
 
 const double min_good = 50;
-const double max_good = 150;
+const double max_good = 200;
 
-const double min_bad = 150;
-const double max_bad = 1581;
+const double min_bad = 200;
+const double max_bad = 600;
 
 double x_ist = -2, y_ist = 2;
 
-int count_mass[n * n] = {0};
+int count_mass_good[n * n] = {0};
+int count_mass_bad[n * n] = {0};
+int count_mass_more_bad[n * n] = {0};
+
+int count_mass[n] = { 0 };
+
+complex<double> filter_mass[c_of_iter][n * n];
 
 complex<double> _H(double x) {
     return complex<double>(_j0(x), _y0(x));
@@ -55,7 +61,7 @@ double K_f(double x, double y) {
         //|| (y > -1 && x > 0. && x < 0.5 && y < 1.)
     //    )
         //if ((y < 0 && x > -.5 && x < 0. && y > -0.5) || (x < 0.2 && y >0. && x > -0.2 && y < 0.4))
-    if ((x == 3||x==4 || x == 5 || x == 6 || x == 7) && (y==3||y == 4 || y == 5 || y == 6 || y == 7))
+    if ((x == 3 || x==4 || x == 5 || x == 6 || x == 7) && (y==3 || y == 4 || y == 5 || y == 6 || y == 7))
         return 300;
     else if (x == 8 && y == 8)
         return 500;
@@ -177,6 +183,51 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
         CreateVec(N, Result);
     for (size_t i = 0; i < N; i++)
     {
+        filter_mass[iter][i] = Matr[i];
+        if (0 < Matr[i].real() && Matr[i].real() < pow(max_good, 2)) {
+            count_mass_good[i]++;
+        }
+        else if (pow(min_bad, 2) < Matr[i].real() && Matr[i].real() < pow(max_bad, 2)) {
+            count_mass_bad[i]++;
+        }
+        else if (pow(max_bad, 2) < Matr[i].real()) {
+            count_mass_more_bad[i]++;
+        }
+        else
+            filter_mass[iter][i] = 0;
+            
+    }
+
+    for (size_t i = 0; i < N; i++)
+    {
+        if (count_mass_more_bad[i] > iter / 3) { //если очень плохих больше трети, то похоже на плохие частоты
+            Result[i] = 1000;       //чтобы видеть проблему
+        }
+        else if (count_mass_bad[i] > iter / 3) {//если плохих больше трети, то похоже на неоднородность
+            Result[i] = 0;
+            for (size_t j = 0; j <= iter; j++)
+            {
+                if (pow(min_bad, 2) < filter_mass[iter][i].real() && filter_mass[iter][i].real() < pow(max_bad, 2)) {
+                    Result[i] += filter_mass[iter][i];
+                }
+            }
+            Result[i] /= count_mass_bad[i];
+        }
+        else if (count_mass_good[i]>2*iter/3) { //если хорошие
+            Result[i] = 100;    //значения фона
+        }
+    }
+
+
+    return Result;
+}
+
+complex<double>* filter_old(complex<double>* Matr, int N, int iter) {
+    static complex<double>* Result = nullptr;
+    if (Result == nullptr)
+        CreateVec(N, Result);
+    for (size_t i = 0; i < N; i++)
+    {
         if (pow(min_good, 2) < Matr[i].real() && Matr[i].real() < pow(max_good, 2)) {
             Matr[i] = 0;  //фон
             count_mass[i]++;
@@ -193,7 +244,6 @@ complex<double>* filter(complex<double>* Matr, int N, int iter) {
     }
     return Result;
 }
-
 int main() {
     //srand(time(0));
     complex<double>** Am;
@@ -205,7 +255,7 @@ int main() {
     double h_x = (B - A) / (double)n;
     double h_y = (D - C) / (double)n;
     cout << h_x << " " << h_y << endl;
-    for (size_t iteration = 1; iteration < c_of_iter; iteration++)
+    for (size_t iteration = 0; iteration < c_of_iter; iteration++)
     {
         /*if (iteration < c_of_iter) {
             freq += 0.5 * Mega;
@@ -372,8 +422,8 @@ int main() {
             vosst_k[I] = tmp;
             ish_k[I] = pow(K_f(i_koll, j_koll), 2);
         }
-        printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k"+to_string(iteration)+".txt");
-        printInFile(filter(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
+        printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k" + to_string(iteration + 1)+".txt");
+        printInFile(filter_old(vosst_k, N, iteration), A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         //printInFile(vosst_k, A, C, h_x_obr, h_y_obr, n_obr, "vosst_k.txt");
         printInFile(ish_k, A, C, h_x_obr, h_y_obr, n_obr, "ish_k.txt");
         //return 0;
